@@ -193,7 +193,8 @@ function App() {
           gap: { xs: 1, sm: 2 },
           minWidth: "100%",
           overflow: "hidden",
-          px: { xs: 1, sm: 2 },
+          px: { xs: 1.5, sm: 3 },
+          py: { xs: 2, sm: 3 },
         }}
       >
         <Box
@@ -205,10 +206,9 @@ function App() {
             alignItems: "center",
             justifyContent: "center",
             gap: { xs: 1, sm: 2 },
-            py: { xs: 1, sm: 2 },
           }}
         >
-          <Typography variant="h5" component="h1" gutterBottom>
+          <Typography variant="h5" component="h1" sx={{ mb: 0.5 }}>
             SCORPIUS
           </Typography>
 
@@ -299,8 +299,9 @@ function App() {
             }
             sx={{
               fontSize: "1.2rem",
-              padding: "12px 24px",
+              padding: "10px 20px",
               backgroundColor: "#c97bd7",
+              mb: 1.5,
             }}
             disabled={loading || !selectedModel}
           >
@@ -322,10 +323,11 @@ function App() {
             <Paper
               elevation={3}
               sx={{
-                p: 1,
+                p: 1.5,
                 maxWidth: { sm: 400 },
                 width: "100%",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
+                mb: 2,
               }}
             >
               <img
@@ -351,7 +353,7 @@ function App() {
               }}
             >
               <Box
-                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+                sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
               >
                 <IconButton
                   onClick={handlePlayPause}

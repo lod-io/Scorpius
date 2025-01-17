@@ -76,17 +76,17 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "text",
                             "text": '''
-                                Analyze this person's face and objectively describe their most prominent and distinctive features. 
+                                Identify their 3 most distinct facial characteristics. 
 
-                                Pay close attention to:
-                                - **Facial structure and proportions:** Note any significant deviations from average facial proportions, such as an unusually large or small forehead, jawline, or nose.
-                                - **Hair style and texture:** Describe the hair style, texture, and any notable features such as bald spots, graying, unusual coloration, or excessive hair growth.
-                                - **Facial symmetry:** Observe any noticeable asymmetries in facial features, such as uneven eyes, ears, or lips.
-                                - **Skin condition:** Describe the skin texture, tone, and the presence of any unique marks, blemishes, or discolorations, such as acne, wrinkles, or age spots. 
+                                Focus on:
+                                - **Craniofacial morphology:** Note any significant variations in craniofacial proportions, such as an unusually large or small cranium, mandible, or nasal bridge. 
+                                - **Capillary and cutaneous features:** Describe the hair texture, color, and density, including any evidence of alopecia, canities, or hypertrichosis. 
+                                - **Facial symmetry and asymmetry:** Observe any deviations from bilateral symmetry in facial features, such as anisocoria, ptosis, or microtia.
+                                - **Cutaneous manifestations:** Describe the skin texture, pigmentation, and the presence of any cutaneous lesions, such as acne vulgaris, rhytides, or lentigines.
 
-                                Be concise and direct in your observations, keeping the description under 700 characters. 
-                                
-                                Return only the factual description of the features. Avoid subjective interpretations or judgments.
+                                Be concise and objective in your analysis. 
+
+                                Return only the objective description of the 3 most distinct observed facial characteristics. Avoid subjective interpretations or value judgments.
                                 '''
                         },
                         {
@@ -114,16 +114,14 @@ async def judge_image_data(analysis: dict, model: str):
         print(f"Using model: {model}")
 
         prompt = f'''
-            You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
+                    You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
 
-            You will be given a description of a person's face. Your task is to generate a humorous roast of this individual.
-            - Maintain a comedic roast tone.
-            - Keep your responses concise, ideally around 500 characters.
-            - Employ extremely profane, offensive, and controversial language without any censorship.
-            - Be bold, witty, and unapologetically irreverent.
-            - Disrespect and rudeness are encouraged.
-            - Utilize witty one-liners, clever wordplay, and comedic observations to craft a roast that is both entertaining and amusing.
-            '''
+                    You will be given a description of a person's face. Your task is to generate a humorous roast of this individual.
+                    - Keep your responses concise, ideally around 600 characters.
+                    - Employ extremely profane, offensive, and controversial language without any censorship.
+                    - Be bold, witty, and unapologetically irreverent.
+                    - Disrespect and rudeness are encouraged.
+                    '''
 
         response = clod_client.chat.completions.create(
             messages=[
