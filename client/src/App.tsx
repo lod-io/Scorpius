@@ -255,6 +255,7 @@ function App() {
             sx={{
               fontSize: "1.2rem",
               padding: "12px 24px",
+              backgroundColor: "#c97bd7",
             }}
             disabled={loading}
           >
@@ -309,7 +310,7 @@ function App() {
               >
                 <IconButton
                   onClick={handlePlayPause}
-                  sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                  sx={{ backgroundColor: "#c97bd7" }}
                 >
                   {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
                 </IconButton>
