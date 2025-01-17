@@ -8,10 +8,17 @@ import {
   CircularProgress,
   Paper,
   IconButton,
+  Stack,
+  Tooltip,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import XIcon from "@mui/icons-material/X";
+import LinkedInIcon from "@mui/icons-material/LinkedIn";
+import CloudIcon from "@mui/icons-material/Cloud";
+import GitHubIcon from "@mui/icons-material/GitHub";
 import { styled } from "@mui/material/styles";
 import { useState, useRef } from "react";
 import axios from "axios";
@@ -126,6 +133,28 @@ function App() {
     }
   };
 
+  const handleShare = (platform: string) => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(
+      "Check out this AI roast I got from Scorpius! 🔥"
+    );
+
+    let shareUrl = "";
+    switch (platform) {
+      case "facebook":
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        break;
+      case "twitter":
+        shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+        break;
+      case "linkedin":
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        break;
+    }
+
+    window.open(shareUrl, "_blank", "width=600,height=400");
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -156,6 +185,66 @@ function App() {
           <Typography variant="h4" component="h1" gutterBottom>
             SCORPIUS
           </Typography>
+
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Tooltip title="Share on Facebook">
+              <IconButton
+                onClick={() => handleShare("facebook")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+                }}
+              >
+                <FacebookIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Share on X">
+              <IconButton
+                onClick={() => handleShare("twitter")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+                }}
+              >
+                <XIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Share on LinkedIn">
+              <IconButton
+                onClick={() => handleShare("linkedin")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+                }}
+              >
+                <LinkedInIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Checkout Scorpius">
+              <IconButton
+                onClick={() =>
+                  window.open("https://github.com/lod-io/scorpius", "_blank")
+                }
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+                }}
+              >
+                <GitHubIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Visit CLōD">
+              <IconButton
+                onClick={() => window.open("https://clod.io", "_blank")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+                }}
+              >
+                <CloudIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
 
           <Button
             component="label"
