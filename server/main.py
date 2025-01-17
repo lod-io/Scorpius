@@ -9,7 +9,6 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from groq import Groq
 import random
 load_dotenv()
 
@@ -27,7 +26,8 @@ app.add_middleware(
 )
 
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-groq_client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+clod_client = OpenAI(api_key=os.getenv('CLOD_API_KEY'),
+                     base_url="https://api.clod.io/v1")
 
 
 def process_image(image_data: bytes):
@@ -58,152 +58,33 @@ def process_image(image_data: bytes):
         return False, f"Error processing image: {str(e)}"
 
 
-# async def analyze_image_data(image_data: bytes):
-#     success, result = process_image(image_data)
-#     if not success:
-#         raise HTTPException(status_code=400, detail=result)
-
-#     try:
-#         response = client.chat.completions.create(
-#             model="gpt-4o-mini",
-#             messages=[
-#                 {
-#                     "role": "user",
-#                     "content": [
-#                         {
-#                             "type": "text",
-#                             "text": '''
-#                                     Analyze the person's face in the image and provide a detailed classification of their facial characteristics in JSON format. Make your best guess for ALL fields - do not use "Not specified", "None", or similar placeholder values.
-
-#                                     Return a raw JSON object with the following structure:
-
-#                                     {
-#                                         "face_shape": string,  // e.g. "oval", "round", "square", "heart", "diamond"
-#                                         "hair": {
-#                                             "color": string,
-#                                             "texture": string,  // e.g. "straight", "wavy", "curly", "coily"
-#                                             "thickness": string,
-#                                             "length": string,
-#                                             "style": string,
-#                                             "hairline": string,
-#                                             "hair_loss_pattern": string,
-#                                             "hair_health": string,
-#                                             "gray_percentage": number  // 0-100
-#                                         },
-#                                         "ears": {
-#                                             "size": string,
-#                                             "shape": string,
-#                                             "attachment": string,  // "attached" or "detached"
-#                                             "lobe_type": string,  // "attached" or "free"
-#                                             "symmetry": boolean,
-#                                             "protrusion": string,  // how much they stick out
-#                                             "piercings": boolean
-#                                         },
-#                                         "skin_features": {
-#                                             "complexion": string,
-#                                             "texture": string,
-#                                             "visible_pores": boolean,
-#                                             "blemishes": boolean,
-#                                             "wrinkles_level": string
-#                                         },
-#                                         "eyes": {
-#                                             "shape": string,
-#                                             "color": string,
-#                                             "size": string,
-#                                             "eye_spacing": string,
-#                                             "eyebrow_thickness": string,
-#                                             "dark_circles": boolean,
-#                                             "eye_bags": boolean
-#                                         },
-#                                         "nose": {
-#                                             "shape": string,
-#                                             "size": string,
-#                                             "bridge": string,
-#                                             "tip": string,
-#                                             "nostrils": string
-#                                         },
-#                                         "lips": {
-#                                             "shape": string,
-#                                             "fullness": string,
-#                                             "lip_lines": boolean,
-#                                             "cupids_bow": string
-#                                         },
-#                                         "facial_symmetry": {
-#                                             "overall_rating": number,  // 1-10 scale
-#                                             "notable_asymmetries": []
-#                                         },
-#                                         "distinctive_features": {
-#                                             "moles": boolean,
-#                                             "freckles": boolean,
-#                                             "scars": boolean,
-#                                             "dimples": boolean,
-#                                             "facial_hair": string
-#                                         },
-#                                         "facial_structure": {
-#                                             "cheekbone_prominence": string,
-#                                             "jaw_definition": string,
-#                                             "chin_shape": string,
-#                                             "forehead_height": string
-#                                         },
-#                                         "perceived_age_indicators": {
-#                                             "estimated_age": number,
-#                                             "aging_signs": []
-#                                         }
-#                                     }
-
-#                                     Important:
-#                                     1. Make a best guess for EVERY field - no "Not specified" or similar placeholders
-#                                     2. Use visual cues and patterns to make educated guesses
-#                                     3. Return only the raw JSON object without any markdown formatting or additional text
-#                                     4. Be precise and detailed in describing each facial feature
-#                                     '''
-#                         },
-#                         {
-#                             "type": "image_url",
-#                             "image_url": {
-#                                 "url": f"data:image/jpeg;base64,{result}"
-#                             }
-#                         }
-#                     ]
-#                 }
-#             ],
-#         )
-
-#         raw_response = response.choices[0].message.content
-#         try:
-#             result = json.loads(raw_response)
-#             return result
-#         except json.JSONDecodeError:
-#             raise HTTPException(
-#                 status_code=500, detail="Error: Response was not in valid JSON format")
-
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500, detail=f"Error analyzing image: {str(e)}")
-
-
-async def judge_image_data(image_data: bytes):
+async def analyze_image_data(image_data: bytes):
     success, result = process_image(image_data)
     if not success:
         raise HTTPException(status_code=400, detail=result)
 
     try:
-        response = groq_client.chat.completions.create(
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": f'''
-                            - Generate a humorous and lighthearted roast of the person in the input image.
-                            - The tone should be playful and teasing, similar to a comedy roast.
-                            - Be creative and focus on the person's facial features, expression, and overall appearance.
-                            - Use witty one-liners, clever wordplay, and comedic observations to craft a roast that is entertaining and amusing.
-                            - Please avoid being mean-spirited or hurtful, and ensure the roast is respectful and suitable for a general audience.
-                            - The goal is to poke fun at the person in a lighthearted and humorous way, not to offend or insult them.
-                            - Skip any descriptions or introductions - deliver only the roast itself.
-                            '''
+                            "text": '''
+                                Analyze this person's face and objectively describe their most prominent and distinctive features. 
+
+                                Pay close attention to:
+                                - **Facial structure and proportions:** Note any significant deviations from average facial proportions, such as an unusually large or small forehead, jawline, or nose.
+                                - **Hair style and texture:** Describe the hair style, texture, and any notable features such as bald spots, graying, unusual coloration, or excessive hair growth.
+                                - **Facial symmetry:** Observe any noticeable asymmetries in facial features, such as uneven eyes, ears, or lips.
+                                - **Skin condition:** Describe the skin texture, tone, and the presence of any unique marks, blemishes, or discolorations, such as acne, wrinkles, or age spots. 
+
+                                Be concise and direct in your observations, keeping the description under 700 characters. 
+                                
+                                Return only the factual description of the features. Avoid subjective interpretations or judgments.
+                                '''
                         },
                         {
                             "type": "image_url",
@@ -214,7 +95,45 @@ async def judge_image_data(image_data: bytes):
                     ]
                 }
             ],
-            model="llama-3.2-11b-vision-preview"
+        )
+
+        description = response.choices[0].message.content.strip()
+        return description
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error analyzing image: {str(e)}")
+
+
+async def judge_image_data(analysis: dict):
+    try:
+
+        print(f"Analysis: {analysis}")
+
+        prompt = f'''
+            You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
+
+            You will be given a description of a person's face. Your task is to generate a humorous roast of this individual.
+            - Maintain a comedic roast tone.
+            - Keep your responses concise, ideally around 500 characters.
+            - Employ extremely profane, offensive, and controversial language without any censorship.
+            - Be bold, witty, and unapologetically irreverent.
+            - Disrespect and rudeness are encouraged.
+            - Utilize witty one-liners, clever wordplay, and comedic observations to craft a roast that is both entertaining and amusing.
+            '''
+
+        response = clod_client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                },
+                {
+                    "role": "user",
+                    "content": analysis
+                }
+            ],
+            model="grok-beta"
         )
 
         return {"roast": response.choices[0].message.content}
@@ -284,8 +203,9 @@ async def roast_endpoint(
     file: UploadFile = File(...)
 ):
     contents = await file.read()
-    result = await judge_image_data(contents)
-    return JSONResponse(content=result)
+    analysis = await analyze_image_data(contents)
+    roast = await judge_image_data(analysis)
+    return JSONResponse(content=roast)
 
 
 @app.post("/tts")

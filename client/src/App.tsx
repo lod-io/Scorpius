@@ -277,7 +277,7 @@ function App() {
             <Paper
               elevation={3}
               sx={{
-                p: 2,
+                p: 1,
                 maxWidth: { sm: 400 },
                 width: "100%",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
