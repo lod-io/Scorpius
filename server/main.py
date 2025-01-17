@@ -232,9 +232,7 @@ async def root():
 async def get_models():
     try:
         async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f'''
-            Bearer {os.getenv('CLOD_API_KEY')}
-            '''}
+            headers = {"Authorization": f"Bearer {os.getenv('CLOD_API_KEY')}"}
             async with session.get("https://api.clod.io/v1/providers/models", headers=headers) as response:
                 if response.status != 200:
                     raise Exception(f'''
@@ -245,13 +243,9 @@ async def get_models():
                 data = await response.json()
                 return {"models": [model["nameInProvider"] for model in data]}
     except Exception as e:
-        logger.error(f'''
-        Error fetching models: {str(e)}
-        ''')
+        logger.error(f"Error fetching models: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f'''
-            Error fetching models: {str(e)}
-            ''')
+            status_code=500, detail=f"Error fetching models: {str(e)}")
 
 
 if __name__ == "__main__":
