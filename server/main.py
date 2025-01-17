@@ -58,7 +58,9 @@ def process_image(image_data: bytes):
 
             return True, base64.b64encode(image_data).decode('utf-8')
     except Exception as e:
-        return False, f"Error processing image: {str(e)}"
+        return False, f'''
+        Error processing image: {str(e)}
+        '''
 
 
 async def analyze_image_data(image_data: bytes):
@@ -76,15 +78,15 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "text",
                             "text": '''
-                                Identify their 3 most distinct facial characteristics. 
+                                Identify their 3 most distinct facial characteristics.
 
                                 Focus on:
-                                - **Craniofacial morphology:** Note any significant variations in craniofacial proportions, such as an unusually large or small cranium, mandible, or nasal bridge. 
-                                - **Capillary and cutaneous features:** Describe the hair texture, color, and density, including any evidence of alopecia, canities, or hypertrichosis. 
+                                - **Craniofacial morphology:** Note any significant variations in craniofacial proportions, such as an unusually large or small cranium, mandible, or nasal bridge.
+                                - **Capillary and cutaneous features:** Describe the hair texture, color, and density, including any evidence of alopecia, canities, or hypertrichosis.
                                 - **Facial symmetry and asymmetry:** Observe any deviations from bilateral symmetry in facial features, such as anisocoria, ptosis, or microtia.
                                 - **Cutaneous manifestations:** Describe the skin texture, pigmentation, and the presence of any cutaneous lesions, such as acne vulgaris, rhytides, or lentigines.
 
-                                Be concise and objective in your analysis. 
+                                Be concise and objective in your analysis.
 
                                 Return only the objective description of the 3 most distinct observed facial characteristics. Avoid subjective interpretations or value judgments.
                                 '''
@@ -92,7 +94,9 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/jpeg;base64,{result}"
+                                "url": f'''
+                                data:image/jpeg;base64,{result}
+                                '''
                             }
                         }
                     ]
@@ -105,13 +109,19 @@ async def analyze_image_data(image_data: bytes):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error analyzing image: {str(e)}")
+            status_code=500, detail=f'''
+            Error analyzing image: {str(e)}
+            ''')
 
 
 async def judge_image_data(analysis: dict, model: str):
     try:
-        print(f"Analysis: {analysis}")
-        print(f"Using model: {model}")
+        print(f'''
+        Analysis: {analysis}
+        ''')
+        print(f'''
+        Using model: {model}
+        ''')
 
         prompt = f'''
                     You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
@@ -141,7 +151,9 @@ async def judge_image_data(analysis: dict, model: str):
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error analyzing image: {str(e)}")
+            status_code=500, detail=f'''
+            Error analyzing image: {str(e)}
+            ''')
 
 
 async def text_to_speech(text: str):
@@ -185,7 +197,9 @@ async def text_to_speech(text: str):
         import traceback
         print(traceback.format_exc())  # Print the full traceback
         raise HTTPException(
-            status_code=500, detail=f"Error generating speech: {str(e)}")
+            status_code=500, detail=f'''
+            Error generating speech: {str(e)}
+            ''')
 
 
 class TTSRequest(BaseModel):
@@ -218,18 +232,26 @@ async def root():
 async def get_models():
     try:
         async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {os.getenv('CLOD_API_KEY')}"}
+            headers = {"Authorization": f'''
+            Bearer {os.getenv('CLOD_API_KEY')}
+            '''}
             async with session.get("https://api.clod.io/v1/providers/models", headers=headers) as response:
                 if response.status != 200:
-                    raise Exception(f"Failed to fetch models: {
-                                    response.status}")
+                    raise Exception(f'''
+                    Failed to fetch models: {
+                                    response.status}
+                    ''')
 
                 data = await response.json()
                 return {"models": [model["nameInProvider"] for model in data]}
     except Exception as e:
-        logger.error(f"Error fetching models: {str(e)}")
+        logger.error(f'''
+        Error fetching models: {str(e)}
+        ''')
         raise HTTPException(
-            status_code=500, detail=f"Error fetching models: {str(e)}")
+            status_code=500, detail=f'''
+            Error fetching models: {str(e)}
+            ''')
 
 
 if __name__ == "__main__":
