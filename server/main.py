@@ -4,12 +4,15 @@ from dotenv import load_dotenv
 from PIL import Image
 import base64
 import io
-import json
+import aiohttp
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = FastAPI(title="Scorpius")
@@ -211,6 +214,25 @@ async def tts_endpoint(request: TTSRequest):
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Scorpius. Use /analyze or /roast endpoints to analyze images."}
+
+
+@app.get("/models")
+async def get_models():
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {"Authorization": f"Bearer {os.getenv('CLOD_API_KEY')}"}
+            async with session.get("https://api.clod.io/v1/providers/models", headers=headers) as response:
+                if response.status != 200:
+                    raise Exception(f"Failed to fetch models: {
+                                    response.status}")
+
+                data = await response.json()
+                return {"models": [model["nameInProvider"] for model in data]}
+    except Exception as e:
+        logger.error(f"Error fetching models: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching models: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

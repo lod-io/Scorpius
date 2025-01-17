@@ -24,7 +24,7 @@ import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import CloudIcon from "@mui/icons-material/Cloud";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import { styled } from "@mui/material/styles";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 const darkTheme = createTheme({
@@ -52,8 +52,28 @@ function App() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
-  const [selectedModel, setSelectedModel] = useState<string>("grok-beta");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/models`
+        );
+        setAvailableModels(response.data.models);
+        if (response.data.models.length > 0) {
+          setSelectedModel(response.data.models[0]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch models:", err);
+        setError("Failed to load available models");
+      }
+    };
+
+    fetchModels();
+  }, []);
 
   const handlePlayPause = () => {
     if (audioRef.current) {
@@ -263,8 +283,11 @@ function App() {
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
               }}
             >
-              <MenuItem value="grok-beta">Grok Beta</MenuItem>
-              <MenuItem value="gemini-1.5-flash">Gemini 1.5 Flash</MenuItem>
+              {availableModels.map((model) => (
+                <MenuItem key={model} value={model}>
+                  {model}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -279,7 +302,7 @@ function App() {
               padding: "12px 24px",
               backgroundColor: "#c97bd7",
             }}
-            disabled={loading}
+            disabled={loading || !selectedModel}
           >
             {loading ? "Roasting..." : "Upload Selfie"}
             <VisuallyHiddenInput
