@@ -34,8 +34,6 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
-
 function App() {
   const [roast, setRoast] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -73,17 +71,24 @@ function App() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(`${apiUrl}/roast`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/roast`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       const roastText = response.data.roast;
       setRoast(roastText);
 
-      const ttsResponse = await axios.post(`${apiUrl}/tts`, {
-        text: roastText,
-      });
+      const ttsResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/tts`,
+        {
+          text: roastText,
+        }
+      );
 
       console.log("TTS Response:", {
         status: ttsResponse.status,
