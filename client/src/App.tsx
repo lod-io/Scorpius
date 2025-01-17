@@ -10,6 +10,10 @@ import {
   IconButton,
   Stack,
   Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -48,6 +52,7 @@ function App() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<string>("grok-beta");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePlayPause = () => {
@@ -76,6 +81,7 @@ function App() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("model", selectedModel);
 
     try {
       const response = await axios.post(
@@ -245,6 +251,22 @@ function App() {
               </IconButton>
             </Tooltip>
           </Stack>
+
+          <FormControl sx={{ minWidth: 200, mb: 2 }}>
+            <InputLabel id="model-select-label">Model</InputLabel>
+            <Select
+              labelId="model-select-label"
+              value={selectedModel}
+              label="Model"
+              onChange={(e) => setSelectedModel(e.target.value)}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+              }}
+            >
+              <MenuItem value="grok-beta">Grok Beta</MenuItem>
+              <MenuItem value="gemini-1.5-flash">Gemini 1.5 Flash</MenuItem>
+            </Select>
+          </FormControl>
 
           <Button
             component="label"

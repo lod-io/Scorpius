@@ -5,7 +5,7 @@ from PIL import Image
 import base64
 import io
 import json
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -105,10 +105,10 @@ async def analyze_image_data(image_data: bytes):
             status_code=500, detail=f"Error analyzing image: {str(e)}")
 
 
-async def judge_image_data(analysis: dict):
+async def judge_image_data(analysis: dict, model: str):
     try:
-
         print(f"Analysis: {analysis}")
+        print(f"Using model: {model}")
 
         prompt = f'''
             You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
@@ -133,7 +133,7 @@ async def judge_image_data(analysis: dict):
                     "content": analysis
                 }
             ],
-            model="grok-beta"
+            model=model
         )
 
         return {"roast": response.choices[0].message.content}
@@ -191,20 +191,14 @@ class TTSRequest(BaseModel):
     text: str
 
 
-# @app.post("/analyze")
-# async def analyze_endpoint(file: UploadFile = File(...)):
-#     contents = await file.read()
-#     result = await analyze_image_data(contents)
-#     return JSONResponse(content=result)
-
-
 @app.post("/roast")
 async def roast_endpoint(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    model: str = Form(...)  # Required field, no default value
 ):
     contents = await file.read()
     analysis = await analyze_image_data(contents)
-    roast = await judge_image_data(analysis)
+    roast = await judge_image_data(analysis, model)
     return JSONResponse(content=roast)
 
 
