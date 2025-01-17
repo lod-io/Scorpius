@@ -164,7 +164,7 @@ function App() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 2,
+          gap: { xs: 1, sm: 2 },
           minWidth: "100%",
           overflow: "hidden",
           px: { xs: 1, sm: 2 },
@@ -172,17 +172,17 @@ function App() {
       >
         <Box
           sx={{
-            minHeight: "100vh",
+            width: "100%",
+            height: "100%",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 2,
-            paddingTop: 2,
-            paddingBottom: 2,
+            gap: { xs: 1, sm: 2 },
+            py: { xs: 1, sm: 2 },
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h5" component="h1" gutterBottom>
             SCORPIUS
           </Typography>
 
@@ -277,7 +277,7 @@ function App() {
               elevation={3}
               sx={{
                 p: 2,
-                maxWidth: { xs: "95%", sm: 400 },
+                maxWidth: { sm: 400 },
                 width: "100%",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
               }}
@@ -299,7 +299,7 @@ function App() {
               elevation={3}
               sx={{
                 p: 2,
-                maxWidth: { xs: "95%", sm: 600 },
+                maxWidth: { sm: 600 },
                 width: "100%",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
               }}
