@@ -230,8 +230,10 @@ async def text_to_speech(text: str):
         voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
         selected_voice = random.choice(voices)
 
-        print(f"Generating speech for text: {text[:100]}... with voice: {
-              selected_voice}")  # Log the input
+        print(f'''
+        Generating speech for text: {text[:100]}...
+        with voice: {selected_voice}
+        ''')  # Log the input
 
         response = openai_client.audio.speech.create(
             model="tts-1",
@@ -241,13 +243,15 @@ async def text_to_speech(text: str):
 
         # Get the audio data
         audio_data = response.content
-        print(f"Received audio data of size: {
-              len(audio_data)} bytes")  # Log the response size
+        print(f'''
+        Received audio data of size: {len(audio_data)} bytes
+        ''')  # Log the response size
 
         # Convert to base64 for transmission
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        print(f"Converted to base64 string of length: {
-              len(audio_base64)}")  # Log the base64 length
+        print(f'''
+        Converted to base64 string of length: {len(audio_base64)}
+        ''')  # Log the base64 length
 
         return {
             "audio": audio_base64,
@@ -255,7 +259,9 @@ async def text_to_speech(text: str):
             "format": "mp3"
         }
     except Exception as e:
-        print(f"Error in text_to_speech: {str(e)}")  # Log the full error
+        print(f'''
+        Error in text_to_speech: {str(e)}
+        ''')  # Log the full error
         import traceback
         print(traceback.format_exc())  # Print the full traceback
         raise HTTPException(
