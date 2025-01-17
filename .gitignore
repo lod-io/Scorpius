@@ -1,5 +1,6 @@
 headshots/
 server/.env
+client/.env
 __pycache__/
 *.py[cod]
 *$py.class

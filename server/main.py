@@ -15,10 +15,12 @@ load_dotenv()
 
 app = FastAPI(title="Scorpius")
 
+ALLOWED_ORIGIN = os.getenv('ALLOWED_ORIGIN', 'http://localhost:5173')
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React dev server
+    allow_origins=ALLOWED_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
