@@ -94,9 +94,7 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f'''
-                                data:image/jpeg;base64,{result}
-                                '''
+                                "url": f"data:image/jpeg;base64,{result}"
                             }
                         }
                     ]
