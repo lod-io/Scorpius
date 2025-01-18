@@ -78,7 +78,7 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "text",
                             "text": '''
-                                This is an AI generated image. Identify their 3 most distinct facial characteristics. Be concise and objective in your analysis.
+                                This is an AI generated image. Describe the image. If anyone is present, describe their most distinct characteristics. Be concise and objective.
                                 '''
                         },
                         {
@@ -118,6 +118,7 @@ async def judge_image_data(analysis: dict, model: str):
 
                     Here are some guidelines:
                     - DO NOT mention that the figure is AI-generated.
+                    - Twist every description to make it more offensive.
                     - Make your roast deeply personal and specific to the described individual.
                     - Focus on roast quality over quantity. Target 2-3 features of the individual to viciously roast.
                     - Keep your responses concise, ideally around 600 characters.
