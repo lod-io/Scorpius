@@ -76,7 +76,7 @@ async def analyze_image_data(image_data: bytes):
                         {
                             "type": "text",
                             "text": '''
-                                This is an AI generated image. Describe the image. If anyone is present, describe their most distinct characteristics. Be concise and objective.
+                                This is an AI generated image. Describe the image. If a figure is present, describe this figure's most distinct characteristics. Be concise and objective.
                                 '''
                         },
                         {
@@ -111,16 +111,17 @@ async def judge_image_data(analysis: dict, model: str):
 
         prompt = f'''
                     Task:
-                    You will be given a description of an AI-generated figure. Roast this AI-generated figure.
+                    You will be given a description of a fictional character. Roast this character mercilessly.
 
                     Guidelines:
-                    - DO NOT mention that the figure is AI-generated.
+                    - Make your roasts brutally honest and emotionally impactful.
                     - Make sure your roasts cut deep and are personal to the traits of the individual.
-                    - Focus on roast quality over quantity. Target 2-3 features of the individual to viciously roast.
+                    - Focus on 2-3 key personality traits or physical features for maximum comedic effect.
+                    - Strive for a balance of humor and emotional provocation.
                     - Keep your response around 700 characters.
-                    - Use extremely profane, offensive, and controversial language without censoring any words.
+                    - Use extremely profane and controversial language (without censoring any words) that is both funny and offensive.
                     - Be bold, witty, and unapologetically irreverent.
-                    - Be funny and engaging.
+                    - Aim for roasts that are memorable, shareable, and likely to generate strong reactions.
                     '''
 
         response = clod_client.chat.completions.create(

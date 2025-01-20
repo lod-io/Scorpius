@@ -15,6 +15,8 @@ import {
   FormControl,
   InputLabel,
   Slider,
+  Popover,
+  Link,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -60,6 +62,7 @@ function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioProgress, setAudioProgress] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -247,6 +250,16 @@ function App() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -285,7 +298,7 @@ function App() {
           </Tooltip>
           <Tooltip title="Visit CLōD">
             <IconButton
-              onClick={() => window.open("https://clod.io", "_blank")}
+              onClick={handlePopoverOpen}
               sx={{
                 backgroundColor: "rgba(255, 255, 255, 0.1)",
                 "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
@@ -294,6 +307,56 @@ function App() {
               <CloudIcon />
             </IconButton>
           </Tooltip>
+          <Popover
+            open={open}
+            anchorEl={anchorEl}
+            onClose={handlePopoverClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "center",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "center",
+            }}
+            PaperProps={{
+              sx: {
+                p: 2,
+                maxWidth: 400,
+                backgroundColor: "rgba(0, 0, 0, 0.95)",
+              },
+            }}
+          >
+            <Typography sx={{ color: "white" }}>
+              Scorpius is powered by{" "}
+              <Link
+                href="https://clod.io"
+                target="_blank"
+                rel="noopener"
+                sx={{ color: "#c97bd7" }}
+              >
+                CLōD
+              </Link>
+              , an AI inference cloud platform.
+              <br />
+              <br />
+              CLōD powers Scorpius with a unique AI-driven roasting experience.
+              Using its unified LLM API, CLōD crafts each roast with a different
+              AI personality, making every interaction fresh and personalized.
+              <br />
+              <br />
+              Learn more at{" "}
+              <Link
+                href="https://clod.io"
+                target="_blank"
+                rel="noopener"
+                sx={{ color: "#c97bd7" }}
+              >
+                clod.io
+              </Link>
+              .
+            </Typography>
+          </Popover>
         </Stack>
 
         <FormControl sx={{ minWidth: 200 }}>
@@ -329,7 +392,7 @@ function App() {
             }}
             disabled={loading || !selectedModel}
           >
-            {loading ? "Roasting..." : "Upload"}
+            {loading ? "Roasting..." : "Add Photo"}
             <VisuallyHiddenInput
               type="file"
               accept="image/*"
