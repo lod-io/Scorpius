@@ -31,24 +31,27 @@ import { styled } from "@mui/material/styles";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
+// Material UI theme configuration for dark mode
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
   },
 });
 
-// Common styles
+// Common styles for main action buttons
 const commonButtonStyle = {
   fontSize: "1.1rem",
   padding: "10px 20px",
   backgroundColor: "#c97bd7",
 };
 
+// Common styles for icon buttons
 const commonIconButtonStyle = {
   backgroundColor: "rgba(255, 255, 255, 0.1)",
   "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
 };
 
+// Hidden input component for file uploads
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
   clipPath: "inset(50%)",
@@ -62,11 +65,17 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 function App() {
+  // State management for roast content and UI controls
   const [roast, setRoast] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<
+    "analyzing" | "judging" | "roasting" | ""
+  >("");
   const [error, setError] = useState<string>("");
   const [imagePreview, setImagePreview] = useState<string>("");
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+
+  // Audio playback state management
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
@@ -77,21 +86,21 @@ function App() {
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Cleanup function for audio URL
+  // Cleanup function for audio URL to prevent memory leaks
   const cleanupAudioUrl = useCallback(() => {
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
   }, [audioUrl]);
 
-  // Cleanup function for image preview
+  // Cleanup function for image preview to prevent memory leaks
   const cleanupImagePreview = useCallback(() => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
   }, [imagePreview]);
 
-  // Cleanup on unmount
+  // Cleanup effect for audio and image URLs on component unmount
   useEffect(() => {
     return () => {
       cleanupAudioUrl();
@@ -99,7 +108,7 @@ function App() {
     };
   }, [cleanupAudioUrl, cleanupImagePreview]);
 
-  // Fetch models on mount
+  // Fetch available AI models on component mount
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -120,7 +129,7 @@ function App() {
     fetchModels();
   }, []);
 
-  // Audio event handlers
+  // Setup audio event listeners and handle audio state
   useEffect(() => {
     if (!audioRef.current) return;
 
@@ -158,15 +167,15 @@ function App() {
       setAudioDuration(audio.duration);
     }
 
+    // Cleanup event listeners on unmount
     return () => {
-      // Remove event listeners
       Object.entries(handlers).forEach(([event, handler]) => {
         audio.removeEventListener(event, handler);
       });
     };
   }, [audioRef.current]);
 
-  // Memoized handlers
+  // Handle play/pause toggle for audio playback
   const handlePlayPause = useCallback(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -178,21 +187,24 @@ function App() {
     }
   }, [isPlaying]);
 
+  // Process audio response from TTS API and start playback
   const processAudioResponse = useCallback(
     async (audioData: string) => {
       cleanupAudioUrl();
 
+      // Convert base64 to binary data
       const binaryString = window.atob(audioData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
+      // Create audio blob and URL
       const blob = new Blob([bytes], { type: "audio/mp3" });
       const newAudioUrl = URL.createObjectURL(blob);
       setAudioUrl(newAudioUrl);
 
-      // Start playing the audio automatically
+      // Auto-play the audio after a short delay
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play();
@@ -203,6 +215,7 @@ function App() {
     [cleanupAudioUrl]
   );
 
+  // Handle the roast response: update state and trigger TTS
   const handleRoastResponse = useCallback(
     async (analysis: string, roastText: string) => {
       setImageAnalysis(analysis);
@@ -218,6 +231,7 @@ function App() {
     [processAudioResponse]
   );
 
+  // Error handling utility for API requests
   const handleError = useCallback((err: unknown) => {
     if (axios.isAxiosError(err)) {
       console.error("Axios error:", {
@@ -232,6 +246,7 @@ function App() {
     }
   }, []);
 
+  // Handle the main roast generation process
   const handleRoast = useCallback(
     async (file: File) => {
       setLoading(true);
@@ -240,6 +255,8 @@ function App() {
       setAudioUrl("");
 
       try {
+        // Step 1: Analyze the image
+        setLoadingStage("analyzing");
         const analysisFormData = new FormData();
         analysisFormData.append("file", file);
         const analysisResponse = await axios.post(
@@ -251,6 +268,8 @@ function App() {
         );
         const analysis = analysisResponse.data.analysis;
 
+        // Step 2: Generate the roast
+        setLoadingStage("judging");
         const judgeResponse = await axios.post(
           `${import.meta.env.VITE_API_URL}/judge`,
           {
@@ -259,11 +278,14 @@ function App() {
           }
         );
 
+        // Step 3: Process the roast and generate TTS
+        setLoadingStage("roasting");
         await handleRoastResponse(analysis, judgeResponse.data.roast);
       } catch (err) {
         handleError(err);
       } finally {
         setLoading(false);
+        setLoadingStage("");
       }
     },
     [selectedModel, handleRoastResponse, handleError]
@@ -292,6 +314,7 @@ function App() {
     setAudioUrl("");
 
     try {
+      setLoadingStage("judging");
       const judgeResponse = await axios.post(
         `${import.meta.env.VITE_API_URL}/judge`,
         {
@@ -300,11 +323,13 @@ function App() {
         }
       );
 
+      setLoadingStage("roasting");
       await handleRoastResponse(imageAnalysis, judgeResponse.data.roast);
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
+      setLoadingStage("");
     }
   }, [imageAnalysis, selectedModel, handleRoastResponse, handleError]);
 
@@ -486,7 +511,11 @@ function App() {
             sx={commonButtonStyle}
             disabled={loading || !selectedModel}
           >
-            {loading ? "Roasting..." : "Add Photo"}
+            {loading
+              ? `${
+                  loadingStage.charAt(0).toUpperCase() + loadingStage.slice(1)
+                }...`
+              : "Add Photo"}
             <VisuallyHiddenInput
               type="file"
               accept="image/*"

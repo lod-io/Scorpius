@@ -13,21 +13,24 @@ import random
 import logging
 import time
 
+# Setup logging
 logger = logging.getLogger(__name__)
 load_dotenv()
 
+# Initialize FastAPI app
 app = FastAPI(title="Scorpius")
 
-# Cache for models list
+# Cache configuration for models list
 models_cache = {
     "data": None,
     "timestamp": None
 }
 
+# Environment and configuration settings
 ALLOWED_ORIGIN = os.getenv('ALLOWED_ORIGIN', 'http://localhost:5173')
 CACHE_DURATION = 300  # 5 minutes in seconds
 
-# Add CORS middleware
+# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGIN,
@@ -36,12 +39,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize API clients
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 clod_client = OpenAI(api_key=os.getenv('CLOD_API_KEY'),
                      base_url="https://api.clod.io/v1")
 
 
 def validate_image(image_data: bytes) -> bool:
+    """
+    Validate if the uploaded file is a supported image format.
+
+    Args:
+        image_data: Raw bytes of the image file
+
+    Returns:
+        bool: True if valid image format, False otherwise
+    """
     try:
         with Image.open(io.BytesIO(image_data)) as img:
             return img.format.lower() in ['jpeg', 'jpg', 'png', 'webp']
@@ -50,15 +63,25 @@ def validate_image(image_data: bytes) -> bool:
 
 
 def process_image(image_data: bytes):
+    """
+    Process and optimize the image for OpenAI's vision API.
+
+    Args:
+        image_data: Raw bytes of the image file
+
+    Returns:
+        tuple: (success: bool, result: str) where result is either base64 encoded image or error message
+    """
     if not validate_image(image_data):
         return False, "Invalid image format. Please upload a JPEG, PNG, or WebP image."
 
     try:
         with Image.open(io.BytesIO(image_data)) as img:
+            # Convert to RGB if needed
             if img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            # Calculate current number of pixels
+            # Resize image if it exceeds OpenAI's pixel limit
             current_pixels = img.width * img.height
             max_pixels = 33177600  # OpenAI's limit
 
@@ -69,6 +92,7 @@ def process_image(image_data: bytes):
                 img = img.resize((new_width, new_height),
                                  Image.Resampling.LANCZOS)
 
+            # Convert to JPEG and encode as base64
             buffer = io.BytesIO()
             img.save(buffer, format='JPEG', quality=95)
             image_data = buffer.getvalue()
@@ -80,6 +104,18 @@ def process_image(image_data: bytes):
 
 
 async def analyze_image_data(image_data: bytes):
+    """
+    Analyze image using OpenAI's vision API to get a description.
+
+    Args:
+        image_data: Raw bytes of the image file
+
+    Returns:
+        str: Description of the image
+
+    Raises:
+        HTTPException: If image processing or analysis fails
+    """
     success, result = process_image(image_data)
     if not success:
         raise HTTPException(status_code=400, detail=result)
@@ -119,6 +155,19 @@ async def analyze_image_data(image_data: bytes):
 
 
 async def judge_image_data(analysis: dict, model: str):
+    """
+    Generate a roast based on the image analysis using CLōD's API.
+
+    Args:
+        analysis: Description of the image
+        model: Name of the CLōD model to use
+
+    Returns:
+        dict: Contains the generated roast
+
+    Raises:
+        HTTPException: If roast generation fails
+    """
     try:
         print(f'''
         Analysis: {analysis}
@@ -127,6 +176,7 @@ async def judge_image_data(analysis: dict, model: str):
         Using model: {model}
         ''')
 
+        # Define the roasting prompt
         prompt = f'''
                     Task:
                     You will be given a description of a fictional character. Roast this character mercilessly.
@@ -168,6 +218,18 @@ async def judge_image_data(analysis: dict, model: str):
 
 
 async def text_to_speech(text: str):
+    """
+    Convert text to speech using OpenAI's TTS API.
+
+    Args:
+        text: Text to convert to speech
+
+    Returns:
+        dict: Contains base64 encoded audio data and metadata
+
+    Raises:
+        HTTPException: If TTS conversion fails
+    """
     try:
         response = openai_client.audio.speech.create(
             model="tts-1",
@@ -175,10 +237,8 @@ async def text_to_speech(text: str):
             input=text
         )
 
-        # Get the audio data
+        # Get the audio data and convert to base64
         audio_data = response.content
-
-        # Convert to base64 for transmission
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 
         return {
@@ -192,6 +252,7 @@ async def text_to_speech(text: str):
             status_code=500, detail=f"Error generating speech: {str(e)}")
 
 
+# Pydantic models for request validation
 class TTSRequest(BaseModel):
     text: str
 
@@ -201,8 +262,10 @@ class AnalysisRequest(BaseModel):
     model: str
 
 
+# API Endpoints
 @app.post("/analyze")
 async def analyze_endpoint(file: UploadFile = File(...)):
+    """Endpoint to analyze an uploaded image"""
     contents = await file.read()
     analysis = await analyze_image_data(contents)
     return JSONResponse(content={"analysis": analysis})
@@ -210,18 +273,21 @@ async def analyze_endpoint(file: UploadFile = File(...)):
 
 @app.post("/judge")
 async def judge_endpoint(request: AnalysisRequest):
+    """Endpoint to generate a roast based on image analysis"""
     roast = await judge_image_data(request.analysis, request.model)
     return JSONResponse(content=roast)
 
 
 @app.post("/tts")
 async def tts_endpoint(request: TTSRequest):
+    """Endpoint to convert text to speech"""
     result = await text_to_speech(request.text)
     return JSONResponse(content=result)
 
 
 @app.get("/")
 async def root():
+    """Root endpoint providing API information"""
     return {
         "message": "Welcome to Scorpius API",
         "version": "1.0.0",
@@ -236,6 +302,10 @@ async def root():
 
 @app.get("/models")
 async def get_models():
+    """
+    Endpoint to get available CLōD models.
+    Uses caching to reduce API calls.
+    """
     try:
         # Check cache first
         current_time = time.time()
@@ -244,6 +314,7 @@ async def get_models():
                 current_time - models_cache["timestamp"] < CACHE_DURATION):
             return {"models": models_cache["data"]}
 
+        # Fetch fresh data if cache is expired
         async with aiohttp.ClientSession() as session:
             headers = {"Authorization": f"Bearer {os.getenv('CLOD_API_KEY')}"}
             async with session.get("https://api.clod.io/v1/providers/models", headers=headers) as response:
