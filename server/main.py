@@ -156,11 +156,6 @@ async def text_to_speech(text: str):
         voices = ["echo", "onyx"]
         selected_voice = random.choice(voices)
 
-        print(f'''
-        Generating speech for text: {text[:100]}...
-        with voice: {selected_voice}
-        ''')  # Log the input
-
         response = openai_client.audio.speech.create(
             model="tts-1",
             voice=selected_voice,
@@ -169,15 +164,9 @@ async def text_to_speech(text: str):
 
         # Get the audio data
         audio_data = response.content
-        print(f'''
-        Received audio data of size: {len(audio_data)} bytes
-        ''')  # Log the response size
 
         # Convert to base64 for transmission
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        print(f'''
-        Converted to base64 string of length: {len(audio_base64)}
-        ''')  # Log the base64 length
 
         return {
             "audio": audio_base64,
@@ -235,7 +224,7 @@ async def get_models():
                     ''')
 
                 data = await response.json()
-                return {"models": [model["nameInProvider"] for model in data]}
+                return {"models": [model["systemName"] for model in data]}
     except Exception as e:
         logger.error(f"Error fetching models: {str(e)}")
         raise HTTPException(

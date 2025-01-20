@@ -62,9 +62,11 @@ function App() {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/models`
         );
-        setAvailableModels(response.data.models);
-        if (response.data.models.length > 0) {
-          setSelectedModel(response.data.models[0]);
+        // Filter out duplicates using a Set
+        const uniqueModels = [...new Set(response.data.models as string[])];
+        setAvailableModels(uniqueModels);
+        if (uniqueModels.length > 0) {
+          setSelectedModel(uniqueModels[0]);
         }
       } catch (err) {
         console.error("Failed to fetch models:", err);
