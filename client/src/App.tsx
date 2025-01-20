@@ -14,6 +14,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Slider,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -55,6 +56,8 @@ function App() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioProgress, setAudioProgress] = useState<number>(0);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -76,6 +79,55 @@ function App() {
 
     fetchModels();
   }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      const audio = audioRef.current;
+
+      const handleTimeUpdate = () => {
+        console.log("Time Update:", {
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          progress: audioProgress,
+          durationState: audioDuration,
+        });
+        setAudioProgress(audio.currentTime);
+      };
+
+      const handleLoadedMetadata = () => {
+        console.log("Loaded Metadata:", {
+          duration: audio.duration,
+        });
+        if (audio.duration && !isNaN(audio.duration)) {
+          setAudioDuration(audio.duration);
+        }
+      };
+
+      const handleDurationChange = () => {
+        console.log("Duration Change:", {
+          duration: audio.duration,
+        });
+        if (audio.duration && !isNaN(audio.duration)) {
+          setAudioDuration(audio.duration);
+        }
+      };
+
+      audio.addEventListener("timeupdate", handleTimeUpdate);
+      audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.addEventListener("durationchange", handleDurationChange);
+
+      // Set initial duration if already loaded
+      if (audio.duration && !isNaN(audio.duration)) {
+        setAudioDuration(audio.duration);
+      }
+
+      return () => {
+        audio.removeEventListener("timeupdate", handleTimeUpdate);
+        audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        audio.removeEventListener("durationchange", handleDurationChange);
+      };
+    }
+  }, [audioRef.current]);
 
   const handlePlayPause = () => {
     if (audioRef.current) {
@@ -181,6 +233,25 @@ function App() {
     }
 
     window.open(shareUrl, "_blank", "width=600,height=400");
+  };
+
+  const handleSliderChange = (_event: Event, newValue: number | number[]) => {
+    if (audioRef.current && typeof newValue === "number") {
+      const audio = audioRef.current;
+      audio.currentTime = newValue;
+      setAudioProgress(newValue);
+      console.log("Slider Change:", {
+        newValue,
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+      });
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -355,7 +426,13 @@ function App() {
               }}
             >
               <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  mb: 2,
+                  width: "100%",
+                }}
               >
                 <IconButton
                   onClick={handlePlayPause}
@@ -363,10 +440,56 @@ function App() {
                 >
                   {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
                 </IconButton>
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Typography variant="caption" color="textSecondary">
+                    {formatTime(audioProgress)}
+                  </Typography>
+                  <Slider
+                    value={audioProgress}
+                    min={0}
+                    max={audioDuration > 0 ? audioDuration : 100}
+                    onChange={handleSliderChange}
+                    sx={{
+                      color: "#c97bd7",
+                      "& .MuiSlider-thumb": {
+                        width: 12,
+                        height: 12,
+                      },
+                    }}
+                  />
+                  <Typography variant="caption" color="textSecondary">
+                    {formatTime(audioDuration || 0)}
+                  </Typography>
+                </Box>
                 <audio
                   ref={audioRef}
                   src={audioUrl}
-                  onEnded={() => setIsPlaying(false)}
+                  onEnded={() => {
+                    console.log("Audio Ended");
+                    setIsPlaying(false);
+                    if (audioRef.current) {
+                      setAudioProgress(audioRef.current.duration);
+                    }
+                  }}
+                  onLoadedData={() => {
+                    console.log("Audio Loaded:", {
+                      duration: audioRef.current?.duration,
+                    });
+                    if (
+                      audioRef.current?.duration &&
+                      !isNaN(audioRef.current.duration)
+                    ) {
+                      setAudioDuration(audioRef.current.duration);
+                    }
+                  }}
+                  preload="metadata"
                   style={{ display: "none" }}
                 />
               </Box>
