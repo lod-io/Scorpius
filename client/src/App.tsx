@@ -28,7 +28,7 @@ import CloudIcon from "@mui/icons-material/Cloud";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 import { styled } from "@mui/material/styles";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
 const darkTheme = createTheme({
@@ -36,6 +36,18 @@ const darkTheme = createTheme({
     mode: "dark",
   },
 });
+
+// Common styles
+const commonButtonStyle = {
+  fontSize: "1.1rem",
+  padding: "10px 20px",
+  backgroundColor: "#c97bd7",
+};
+
+const commonIconButtonStyle = {
+  backgroundColor: "rgba(255, 255, 255, 0.1)",
+  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+};
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -59,11 +71,35 @@ function App() {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [imageAnalysis, setImageAnalysis] = useState<string>("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioProgress, setAudioProgress] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
+  // Cleanup function for audio URL
+  const cleanupAudioUrl = useCallback(() => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+  }, [audioUrl]);
+
+  // Cleanup function for image preview
+  const cleanupImagePreview = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+  }, [imagePreview]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupAudioUrl();
+      cleanupImagePreview();
+    };
+  }, [cleanupAudioUrl, cleanupImagePreview]);
+
+  // Fetch models on mount
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -84,44 +120,54 @@ function App() {
     fetchModels();
   }, []);
 
+  // Audio event handlers
   useEffect(() => {
-    if (audioRef.current) {
-      const audio = audioRef.current;
+    if (!audioRef.current) return;
 
-      const handleTimeUpdate = () => {
-        setAudioProgress(audio.currentTime);
-      };
-
-      const handleLoadedMetadata = () => {
+    const audio = audioRef.current;
+    const handlers = {
+      timeupdate: () => setAudioProgress(audio.currentTime),
+      loadedmetadata: () => {
         if (audio.duration && !isNaN(audio.duration)) {
           setAudioDuration(audio.duration);
         }
-      };
-
-      const handleDurationChange = () => {
+      },
+      durationchange: () => {
         if (audio.duration && !isNaN(audio.duration)) {
           setAudioDuration(audio.duration);
         }
-      };
+      },
+      ended: () => {
+        setIsPlaying(false);
+        setAudioProgress(audio.duration);
+      },
+      loadeddata: () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          setAudioDuration(audio.duration);
+        }
+      },
+    };
 
-      audio.addEventListener("timeupdate", handleTimeUpdate);
-      audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.addEventListener("durationchange", handleDurationChange);
+    // Add event listeners
+    Object.entries(handlers).forEach(([event, handler]) => {
+      audio.addEventListener(event, handler);
+    });
 
-      // Set initial duration if already loaded
-      if (audio.duration && !isNaN(audio.duration)) {
-        setAudioDuration(audio.duration);
-      }
-
-      return () => {
-        audio.removeEventListener("timeupdate", handleTimeUpdate);
-        audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        audio.removeEventListener("durationchange", handleDurationChange);
-      };
+    // Set initial duration if already loaded
+    if (audio.duration && !isNaN(audio.duration)) {
+      setAudioDuration(audio.duration);
     }
+
+    return () => {
+      // Remove event listeners
+      Object.entries(handlers).forEach(([event, handler]) => {
+        audio.removeEventListener(event, handler);
+      });
+    };
   }, [audioRef.current]);
 
-  const handlePlayPause = () => {
+  // Memoized handlers
+  const handlePlayPause = useCallback(() => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -130,39 +176,11 @@ function App() {
       }
       setIsPlaying(!isPlaying);
     }
-  };
+  }, [isPlaying]);
 
-  const handleRoast = async (file: File) => {
-    setLoading(true);
-    setError("");
-    setRoast("");
-    setAudioUrl("");
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("model", selectedModel);
-
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/roast`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      const roastText = response.data.roast;
-      setRoast(roastText);
-
-      const ttsResponse = await axios.post(
-        `${import.meta.env.VITE_API_URL}/tts`,
-        {
-          text: roastText,
-        }
-      );
-
-      const audioData = ttsResponse.data.audio;
+  const processAudioResponse = useCallback(
+    async (audioData: string) => {
+      cleanupAudioUrl();
 
       const binaryString = window.atob(audioData);
       const bytes = new Uint8Array(binaryString.length);
@@ -171,92 +189,172 @@ function App() {
       }
 
       const blob = new Blob([bytes], { type: "audio/mp3" });
-      const audioUrl = URL.createObjectURL(blob);
-      setAudioUrl(audioUrl);
+      const newAudioUrl = URL.createObjectURL(blob);
+      setAudioUrl(newAudioUrl);
+
       // Start playing the audio automatically
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play();
           setIsPlaying(true);
         }
-      }, 100); // Small delay to ensure audio is loaded
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        console.error("Axios error:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
-        });
-        setError(`Error: ${err.response?.data?.detail || err.message}`);
-      } else {
-        console.error("Unknown error:", err);
-        setError("Failed to get roast. Please try again.");
+      }, 100);
+    },
+    [cleanupAudioUrl]
+  );
+
+  const handleRoastResponse = useCallback(
+    async (analysis: string, roastText: string) => {
+      setImageAnalysis(analysis);
+      setRoast(roastText);
+
+      const ttsResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/tts`,
+        { text: roastText }
+      );
+
+      await processAudioResponse(ttsResponse.data.audio);
+    },
+    [processAudioResponse]
+  );
+
+  const handleError = useCallback((err: unknown) => {
+    if (axios.isAxiosError(err)) {
+      console.error("Axios error:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      setError(`Error: ${err.response?.data?.detail || err.message}`);
+    } else {
+      console.error("Unknown error:", err);
+      setError("Failed to get roast. Please try again.");
+    }
+  }, []);
+
+  const handleRoast = useCallback(
+    async (file: File) => {
+      setLoading(true);
+      setError("");
+      setRoast("");
+      setAudioUrl("");
+
+      try {
+        const analysisFormData = new FormData();
+        analysisFormData.append("file", file);
+        const analysisResponse = await axios.post(
+          `${import.meta.env.VITE_API_URL}/analyze`,
+          analysisFormData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        const analysis = analysisResponse.data.analysis;
+
+        const judgeResponse = await axios.post(
+          `${import.meta.env.VITE_API_URL}/judge`,
+          {
+            analysis: analysis,
+            model: selectedModel,
+          }
+        );
+
+        await handleRoastResponse(analysis, judgeResponse.data.roast);
+      } catch (err) {
+        handleError(err);
+      } finally {
+        setLoading(false);
       }
+    },
+    [selectedModel, handleRoastResponse, handleError]
+  );
+
+  const handleFileUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      cleanupImagePreview();
+
+      setCurrentFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      await handleRoast(file);
+    },
+    [handleRoast, cleanupImagePreview]
+  );
+
+  const handleReRoast = useCallback(async () => {
+    if (!imageAnalysis) return;
+
+    setLoading(true);
+    setError("");
+    setRoast("");
+    setAudioUrl("");
+
+    try {
+      const judgeResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/judge`,
+        {
+          analysis: imageAnalysis,
+          model: selectedModel,
+        }
+      );
+
+      await handleRoastResponse(imageAnalysis, judgeResponse.data.roast);
+    } catch (err) {
+      handleError(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [imageAnalysis, selectedModel, handleRoastResponse, handleError]);
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setCurrentFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    await handleRoast(file);
-  };
-
-  const handleReRoast = async () => {
-    if (currentFile) {
-      await handleRoast(currentFile);
-    }
-  };
-
-  const handleShare = (platform: string) => {
+  const handleShare = useCallback((platform: string) => {
     const url = encodeURIComponent(window.location.href);
     const text = encodeURIComponent(
       "Check out this AI roast I got from Scorpius! 🔥"
     );
 
-    let shareUrl = "";
-    switch (platform) {
-      case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-        break;
-      case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-        break;
-      case "linkedin":
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
-        break;
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      twitter: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+    };
+
+    const shareUrl = shareUrls[platform as keyof typeof shareUrls];
+    if (shareUrl) {
+      window.open(shareUrl, "_blank", "width=600,height=400");
     }
+  }, []);
 
-    window.open(shareUrl, "_blank", "width=600,height=400");
-  };
+  const handleSliderChange = useCallback(
+    (_event: Event, newValue: number | number[]) => {
+      if (audioRef.current && typeof newValue === "number") {
+        audioRef.current.currentTime = newValue;
+        setAudioProgress(newValue);
+      }
+    },
+    []
+  );
 
-  const handleSliderChange = (_event: Event, newValue: number | number[]) => {
-    if (audioRef.current && typeof newValue === "number") {
-      const audio = audioRef.current;
-      audio.currentTime = newValue;
-      setAudioProgress(newValue);
-    }
-  };
+  const formatTime = useMemo(
+    () => (time: number) => {
+      const minutes = Math.floor(time / 60);
+      const seconds = Math.floor(time % 60);
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    },
+    []
+  );
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const handlePopoverOpen = useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    },
+    []
+  );
 
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handlePopoverClose = () => {
+  const handlePopoverClose = useCallback(() => {
     setAnchorEl(null);
-  };
+  }, []);
 
   const open = Boolean(anchorEl);
 
@@ -283,7 +381,7 @@ function App() {
           <Typography variant="h5" component="h1">
             SCORPIUS
           </Typography>
-          <Tooltip title="Checkout Scorpius">
+          <Tooltip title="Scorpius">
             <IconButton
               onClick={() =>
                 window.open("https://github.com/lod-io/scorpius", "_blank")
@@ -296,7 +394,7 @@ function App() {
               <GitHubIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Visit CLōD">
+          <Tooltip title="CLōD">
             <IconButton
               onClick={handlePopoverOpen}
               sx={{
@@ -385,11 +483,7 @@ function App() {
             startIcon={
               loading ? <CircularProgress size={20} /> : <CloudUploadIcon />
             }
-            sx={{
-              fontSize: "1.2rem",
-              padding: "10px 20px",
-              backgroundColor: "#c97bd7",
-            }}
+            sx={commonButtonStyle}
             disabled={loading || !selectedModel}
           >
             {loading ? "Roasting..." : "Add Photo"}
@@ -403,11 +497,7 @@ function App() {
             <Button
               variant="contained"
               startIcon={<WhatshotIcon />}
-              sx={{
-                fontSize: "1.2rem",
-                padding: "10px 20px",
-                backgroundColor: "#c97bd7",
-              }}
+              sx={commonButtonStyle}
               onClick={handleReRoast}
               disabled={loading || !currentFile}
             >
@@ -522,7 +612,10 @@ function App() {
                   style={{ display: "none" }}
                 />
               </Box>
-              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+              <Typography
+                variant="body1"
+                sx={{ whiteSpace: "pre-wrap", mt: 2 }}
+              >
                 {roast}
               </Typography>
             </Paper>
@@ -538,12 +631,7 @@ function App() {
             <Tooltip title="Share on Facebook">
               <IconButton
                 onClick={() => handleShare("facebook")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  },
-                }}
+                sx={commonIconButtonStyle}
               >
                 <FacebookIcon />
               </IconButton>
@@ -551,12 +639,7 @@ function App() {
             <Tooltip title="Share on X">
               <IconButton
                 onClick={() => handleShare("twitter")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  },
-                }}
+                sx={commonIconButtonStyle}
               >
                 <XIcon />
               </IconButton>
@@ -564,12 +647,7 @@ function App() {
             <Tooltip title="Share on LinkedIn">
               <IconButton
                 onClick={() => handleShare("linkedin")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  },
-                }}
+                sx={commonIconButtonStyle}
               >
                 <LinkedInIcon />
               </IconButton>
