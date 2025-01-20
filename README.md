@@ -1,4 +1,4 @@
-# Scorpius: Get Roasted by AI 🤖
+# Scorpius: Get Roasted by AI 🔥
 
 > We're [live](https://scorpius.onrender.com/) 🎉
 
