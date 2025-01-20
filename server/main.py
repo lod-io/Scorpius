@@ -43,9 +43,7 @@ def process_image(image_data: bytes):
             current_pixels = img.width * img.height
             max_pixels = 33177600  # OpenAI's limit
 
-            # Resize if image is too large
             if current_pixels > max_pixels:
-                # Calculate the scaling factor
                 scale = (max_pixels / current_pixels) ** 0.5
                 new_width = int(img.width * scale)
                 new_height = int(img.height * scale)
@@ -112,19 +110,17 @@ async def judge_image_data(analysis: dict, model: str):
         ''')
 
         prompt = f'''
-                    You are a roastmaster. You possess a unique talent for delivering scathing, disrespectful roasts that are both entertaining and offensive.
+                    Task:
+                    You will be given a description of an AI-generated figure. Roast this AI-generated figure.
 
-                    You will be given a description of an AI-generated figure. Your task is to generate a humorous roast of this AI-generated figure.
-
-                    Here are some guidelines:
+                    Guidelines:
                     - DO NOT mention that the figure is AI-generated.
-                    - Twist every description to make it more offensive.
-                    - Make your roast deeply personal and specific to the described individual.
+                    - Make sure your roasts cut deep and are personal to the traits of the individual.
                     - Focus on roast quality over quantity. Target 2-3 features of the individual to viciously roast.
-                    - Keep your responses concise, ideally around 600 characters.
+                    - Keep your response around 700 characters.
                     - Use extremely profane, offensive, and controversial language without censoring any words.
                     - Be bold, witty, and unapologetically irreverent.
-                    - Disrespect and rudeness are encouraged.
+                    - Be funny and engaging.
                     '''
 
         response = clod_client.chat.completions.create(
@@ -138,7 +134,9 @@ async def judge_image_data(analysis: dict, model: str):
                     "content": analysis
                 }
             ],
-            model=model
+            model=model,
+            temperature=1.0,
+            top_p=1.0,
         )
 
         return {"roast": response.choices[0].message.content}
@@ -153,12 +151,12 @@ async def judge_image_data(analysis: dict, model: str):
 async def text_to_speech(text: str):
     try:
         # List of available OpenAI TTS voices
-        voices = ["echo", "onyx"]
-        selected_voice = random.choice(voices)
+        # voices = ["echo", "onyx"]
+        # selected_voice = random.choice(voices)
 
         response = openai_client.audio.speech.create(
             model="tts-1",
-            voice=selected_voice,
+            voice="onyx",
             input=text
         )
 
@@ -170,15 +168,15 @@ async def text_to_speech(text: str):
 
         return {
             "audio": audio_base64,
-            "voice": selected_voice,
+            "voice": "onyx",
             "format": "mp3"
         }
     except Exception as e:
         print(f'''
         Error in text_to_speech: {str(e)}
-        ''')  # Log the full error
+        ''')
         import traceback
-        print(traceback.format_exc())  # Print the full traceback
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=500, detail=f'''
             Error generating speech: {str(e)}
@@ -192,7 +190,7 @@ class TTSRequest(BaseModel):
 @app.post("/roast")
 async def roast_endpoint(
     file: UploadFile = File(...),
-    model: str = Form(...)  # Required field, no default value
+    model: str = Form(...)
 ):
     contents = await file.read()
     analysis = await analyze_image_data(contents)

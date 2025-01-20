@@ -24,6 +24,7 @@ import XIcon from "@mui/icons-material/X";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import CloudIcon from "@mui/icons-material/Cloud";
 import GitHubIcon from "@mui/icons-material/GitHub";
+import WhatshotIcon from "@mui/icons-material/Whatshot";
 import { styled } from "@mui/material/styles";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
@@ -51,6 +52,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
@@ -65,7 +67,6 @@ function App() {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/models`
         );
-        // Filter out duplicates using a Set
         const uniqueModels = [...new Set(response.data.models as string[])];
         setAvailableModels(uniqueModels);
         if (uniqueModels.length > 0) {
@@ -85,28 +86,16 @@ function App() {
       const audio = audioRef.current;
 
       const handleTimeUpdate = () => {
-        console.log("Time Update:", {
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          progress: audioProgress,
-          durationState: audioDuration,
-        });
         setAudioProgress(audio.currentTime);
       };
 
       const handleLoadedMetadata = () => {
-        console.log("Loaded Metadata:", {
-          duration: audio.duration,
-        });
         if (audio.duration && !isNaN(audio.duration)) {
           setAudioDuration(audio.duration);
         }
       };
 
       const handleDurationChange = () => {
-        console.log("Duration Change:", {
-          duration: audio.duration,
-        });
         if (audio.duration && !isNaN(audio.duration)) {
           setAudioDuration(audio.duration);
         }
@@ -140,18 +129,11 @@ function App() {
     }
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const handleRoast = async (file: File) => {
     setLoading(true);
     setError("");
     setRoast("");
     setAudioUrl("");
-
-    setImagePreview(URL.createObjectURL(file));
 
     const formData = new FormData();
     formData.append("file", file);
@@ -177,14 +159,7 @@ function App() {
         }
       );
 
-      console.log("TTS Response:", {
-        status: ttsResponse.status,
-        headers: ttsResponse.headers,
-        dataKeys: Object.keys(ttsResponse.data),
-      });
-
       const audioData = ttsResponse.data.audio;
-      console.log("Audio data length:", audioData.length);
 
       const binaryString = window.atob(audioData);
       const bytes = new Uint8Array(binaryString.length);
@@ -194,8 +169,14 @@ function App() {
 
       const blob = new Blob([bytes], { type: "audio/mp3" });
       const audioUrl = URL.createObjectURL(blob);
-      console.log("Created audio URL:", audioUrl);
       setAudioUrl(audioUrl);
+      // Start playing the audio automatically
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play();
+          setIsPlaying(true);
+        }
+      }, 100); // Small delay to ensure audio is loaded
     } catch (err) {
       if (axios.isAxiosError(err)) {
         console.error("Axios error:", {
@@ -210,6 +191,23 @@ function App() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setCurrentFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    await handleRoast(file);
+  };
+
+  const handleReRoast = async () => {
+    if (currentFile) {
+      await handleRoast(currentFile);
     }
   };
 
@@ -240,11 +238,6 @@ function App() {
       const audio = audioRef.current;
       audio.currentTime = newValue;
       setAudioProgress(newValue);
-      console.log("Slider Change:", {
-        newValue,
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-      });
     }
   };
 
@@ -259,111 +252,70 @@ function App() {
       <CssBaseline />
       <Container
         sx={{
+          width: "100%",
+          height: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: { xs: 1, sm: 2 },
-          minWidth: "100%",
-          overflow: "hidden",
-          px: { xs: 1.5, sm: 3 },
-          py: { xs: 2, sm: 3 },
+          gap: { xs: 2, sm: 3 },
+          py: 4,
         }}
       >
-        <Box
-          sx={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: { xs: 1, sm: 2 },
-          }}
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: "center", justifyContent: "center" }}
         >
-          <Typography variant="h5" component="h1" sx={{ mb: 0.5 }}>
+          <Typography variant="h5" component="h1">
             SCORPIUS
           </Typography>
-
-          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-            <Tooltip title="Share on Facebook">
-              <IconButton
-                onClick={() => handleShare("facebook")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
-                }}
-              >
-                <FacebookIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Share on X">
-              <IconButton
-                onClick={() => handleShare("twitter")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
-                }}
-              >
-                <XIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Share on LinkedIn">
-              <IconButton
-                onClick={() => handleShare("linkedin")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
-                }}
-              >
-                <LinkedInIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Checkout Scorpius">
-              <IconButton
-                onClick={() =>
-                  window.open("https://github.com/lod-io/scorpius", "_blank")
-                }
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
-                }}
-              >
-                <GitHubIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Visit CLōD">
-              <IconButton
-                onClick={() => window.open("https://clod.io", "_blank")}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
-                }}
-              >
-                <CloudIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-
-          <FormControl sx={{ minWidth: 200, mb: 2 }}>
-            <InputLabel id="model-select-label">Model</InputLabel>
-            <Select
-              labelId="model-select-label"
-              value={selectedModel}
-              label="Model"
-              onChange={(e) => setSelectedModel(e.target.value)}
+          <Tooltip title="Checkout Scorpius">
+            <IconButton
+              onClick={() =>
+                window.open("https://github.com/lod-io/scorpius", "_blank")
+              }
               sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
               }}
             >
-              {availableModels.map((model) => (
-                <MenuItem key={model} value={model}>
-                  {model}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <GitHubIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Visit CLōD">
+            <IconButton
+              onClick={() => window.open("https://clod.io", "_blank")}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" },
+              }}
+            >
+              <CloudIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
 
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="model-select-label">Model</InputLabel>
+          <Select
+            labelId="model-select-label"
+            value={selectedModel}
+            label="Model"
+            onChange={(e) => setSelectedModel(e.target.value)}
+            sx={{
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+            }}
+          >
+            {availableModels.map((model) => (
+              <MenuItem key={model} value={model}>
+                {model}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
           <Button
             component="label"
             variant="contained"
@@ -374,47 +326,66 @@ function App() {
               fontSize: "1.2rem",
               padding: "10px 20px",
               backgroundColor: "#c97bd7",
-              mb: 1.5,
             }}
             disabled={loading || !selectedModel}
           >
-            {loading ? "Roasting..." : "Upload Selfie"}
+            {loading ? "Roasting..." : "Upload"}
             <VisuallyHiddenInput
               type="file"
               accept="image/*"
               onChange={handleFileUpload}
             />
           </Button>
-
-          {error && (
-            <Typography color="error" variant="body1">
-              {error}
-            </Typography>
-          )}
-
-          {imagePreview && (
-            <Paper
-              elevation={3}
+          {roast && currentFile && !loading && (
+            <Button
+              variant="contained"
+              startIcon={<WhatshotIcon />}
               sx={{
-                p: 1.5,
-                maxWidth: { sm: 400 },
-                width: "100%",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                mb: 2,
+                fontSize: "1.2rem",
+                padding: "10px 20px",
+                backgroundColor: "#c97bd7",
               }}
+              onClick={handleReRoast}
+              disabled={loading || !currentFile}
             >
-              <img
-                src={imagePreview}
-                alt="Uploaded selfie"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: "4px",
-                }}
-              />
-            </Paper>
+              Re-roast
+            </Button>
           )}
+        </Stack>
 
+        {error && (
+          <Typography color="error" variant="body1">
+            {error}
+          </Typography>
+        )}
+
+        {imagePreview && (
+          <Paper
+            elevation={3}
+            sx={{
+              p: 1.5,
+              maxWidth: { sm: 400 },
+              width: "100%",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+            }}
+          >
+            <img
+              src={imagePreview}
+              alt="Uploaded selfie"
+              style={{
+                width: "100%",
+                height: "auto",
+                borderRadius: "4px",
+              }}
+            />
+          </Paper>
+        )}
+
+        <Stack
+          direction="column"
+          spacing={2}
+          sx={{ alignItems: "center", justifyContent: "center" }}
+        >
           {roast && audioUrl && (
             <Paper
               elevation={3}
@@ -430,7 +401,6 @@ function App() {
                   display: "flex",
                   alignItems: "center",
                   gap: 1.5,
-                  mb: 2,
                   width: "100%",
                 }}
               >
@@ -472,16 +442,12 @@ function App() {
                   ref={audioRef}
                   src={audioUrl}
                   onEnded={() => {
-                    console.log("Audio Ended");
                     setIsPlaying(false);
                     if (audioRef.current) {
                       setAudioProgress(audioRef.current.duration);
                     }
                   }}
                   onLoadedData={() => {
-                    console.log("Audio Loaded:", {
-                      duration: audioRef.current?.duration,
-                    });
                     if (
                       audioRef.current?.duration &&
                       !isNaN(audioRef.current.duration)
@@ -498,7 +464,55 @@ function App() {
               </Typography>
             </Paper>
           )}
-        </Box>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ alignItems: "center", justifyContent: "center" }}
+          >
+            <Typography variant="h6" component="h1">
+              SHARE
+            </Typography>
+            <Tooltip title="Share on Facebook">
+              <IconButton
+                onClick={() => handleShare("facebook")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  },
+                }}
+              >
+                <FacebookIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Share on X">
+              <IconButton
+                onClick={() => handleShare("twitter")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  },
+                }}
+              >
+                <XIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Share on LinkedIn">
+              <IconButton
+                onClick={() => handleShare("linkedin")}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  },
+                }}
+              >
+                <LinkedInIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Stack>
       </Container>
     </ThemeProvider>
   );
