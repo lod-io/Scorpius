@@ -225,9 +225,10 @@ async def text_to_speech(text: str):
         HTTPException: If TTS conversion fails
     """
     try:
+        voice = random.choice(["onyx", "echo", "shimmer"])
         response = openai_client.audio.speech.create(
             model="tts-1",
-            voice="onyx",
+            voice=voice,
             input=text
         )
 
@@ -237,7 +238,7 @@ async def text_to_speech(text: str):
 
         return {
             "audio": audio_base64,
-            "voice": "onyx",
+            "voice": voice,
             "format": "mp3"
         }
     except Exception as e:
