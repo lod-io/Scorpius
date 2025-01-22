@@ -169,12 +169,6 @@ async def judge_image_data(analysis: dict, model: str):
         HTTPException: If roast generation fails
     """
     try:
-        print(f'''
-        Analysis: {analysis}
-        ''')
-        print(f'''
-        Using model: {model}
-        ''')
 
         # Define the roasting prompt
         prompt = f'''
