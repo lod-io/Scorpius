@@ -179,17 +179,17 @@ async def judge_image_data(analysis: dict, model: str):
         # Define the roasting prompt
         prompt = f'''
                     Task:
-                    You will be given a description of a fictional character. Roast this character mercilessly.
+                    You will be given a description of a fictional character. Roast this character like a comedian.
 
                     Guidelines:
-                    - Make your roasts brutally honest and emotionally impactful.
-                    - Make sure your roasts cut deep and are personal to the traits of the individual.
-                    - Focus on 2-3 key personality traits or physical features for maximum comedic effect.
-                    - Strive for a balance of humor and emotional provocation.
-                    - Keep your response around 700 characters.
-                    - Use extremely profane and controversial language (without censoring any words) that is both funny and offensive.
-                    - Be bold, witty, and unapologetically irreverent.
-                    - Aim for roasts that are memorable, shareable, and likely to generate strong reactions.
+                    - Make your roasts emotionally impactful and brutally honest to the specific traits of the character.
+                    - Guess what persona the character is trying to pull off and call them out for it.
+                    - Guess what the character's day-to-day life is like and call them out for it.
+                    - Use profane and controversial language (without censoring any words) to support your roasts.
+                    - Don't call the character bland, boring, or anything along those lines. Take advantage of their unique quirks.
+                    - Do not use any generic, overused jokes. Create your own jokes and make them original.
+                    - Your goal is to make everyone laugh.
+                    - Keep your response around 600 characters.
                     '''
 
         response = clod_client.chat.completions.create(
