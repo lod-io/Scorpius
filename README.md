@@ -51,7 +51,7 @@ OPENAI_API_KEY="[your-openai-api-key]"
 3. Create `.env` in the `client` directory:
 
 ```bash
-REACT_APP_API_URL="http://localhost:8000"
+VITE_API_URL="http://localhost:8000"
 ```
 
 ### Frontend Setup
